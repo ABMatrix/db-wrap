@@ -82,7 +82,7 @@ pub mod db_server {
     }
 
     fn to_string<V: Serialize>(value: V, at: &str) -> Result<String, String> {
-        serde_json::to_string(&value).map_err(|e| format!("{at} serialize err: {e:?}"))
+        serde_json::to_string(&value).map_err(|e| format!("{} serialize err: {:?}", at, e))
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,33 +116,33 @@ pub mod db_server {
         let res = match request.0.req {
             RequestType::Get(key) => match db_ref.get(key, &path) {
                 Ok(res) => to_string(&res, "db_get"),
-                Err(e) => Err(format!("db_req failed for: {e:?}")),
+                Err(e) => Err(format!("db_req failed for: {:?}", e)),
             },
             RequestType::Put(key, value, level, force) => {
                 match db_ref.put(key, value, level, force, &path) {
                     Ok(res) => to_string(&res, "db_put"),
-                    Err(e) => Err(format!("db_req failed for: {e:?}")),
+                    Err(e) => Err(format!("db_req failed for: {:?}", e)),
                 }
             }
             RequestType::PutBatch(pairs) => match db_ref.put_batch(pairs, &path) {
                 Ok(res) => to_string(&res, "db_put_batch"),
-                Err(e) => Err(format!("db_req failed for: {e:?}")),
+                Err(e) => Err(format!("db_req failed for: {:?}", e)),
             },
             RequestType::Delete(key) => match db_ref.delete(key, &path) {
                 Ok(res) => to_string(&res, "db_delete"),
-                Err(e) => Err(format!("db_req failed for: {e:?}")),
+                Err(e) => Err(format!("db_req failed for: {:?}", e)),
             },
             RequestType::DeleteBatch(keys) => match db_ref.delete_batch(keys, &path) {
                 Ok(res) => to_string(&res, "db_delete_batch"),
-                Err(e) => Err(format!("db_req failed for: {e:?}")),
+                Err(e) => Err(format!("db_req failed for: {:?}", e)),
             },
             RequestType::GetPrefix(key) => match db_ref.get_prefix(key, &path) {
                 Ok(res) => to_string(&res, "db_get_prefix"),
-                Err(e) => Err(format!("db_req failed for: {e:?}")),
+                Err(e) => Err(format!("db_req failed for: {:?}", e)),
             },
             RequestType::DeletePrefix(key) => match db_ref.delete_prefix(key, &path) {
                 Ok(res) => to_string(&res, "db_delete_prefix"),
-                Err(e) => Err(format!("db_req failed for: {e:?}")),
+                Err(e) => Err(format!("db_req failed for: {:?}", e)),
             },
         };
         Json(res)

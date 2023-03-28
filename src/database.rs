@@ -112,7 +112,7 @@ impl DbWrap {
             }
             Ok(None) => (),
         };
-        log::debug!(target: "database", "put: {k}, hash: {}, level: {}", debug_hash_data(&v), lv);
+        log::debug!(target: "database", "put: {}, hash: {}, level: {}", k, debug_hash_data(&v), lv);
         db.put(&k, &v.data_with_lv(lv))?;
         db.flush()?;
         Ok(())
@@ -125,12 +125,12 @@ impl DbWrap {
         let mut batch = WriteBatch::default();
         for (k, v) in pairs {
             batch.put(&k, &v.data_with_lv(DEFAULT_LEVEL));
-            log::debug!(target: "database", "try put batch id: {batch_id}, k: {k}, hash: {}, level: {DEFAULT_LEVEL}", debug_hash_data(&v));
+            log::debug!(target: "database", "try put batch id: {}, k: {}, hash: {}, level: {DEFAULT_LEVEL}", batch_id, k, debug_hash_data(&v));
         }
         match db.write(batch) {
-            Ok(()) => log::debug!(target: "database", "put batch {batch_id} success"),
+            Ok(()) => log::debug!(target: "database", "put batch {} success", batch_id),
             Err(e) => {
-                log::error!(target: "database", "put batch {batch_id} failed for {e:?}");
+                log::error!(target: "database", "put batch {} failed for {:?}", batch_id, e);
                 bail!("{:?}", e);
             }
         }
@@ -142,7 +142,7 @@ impl DbWrap {
         let db = self.db(path)?;
         db.delete(&k)?;
         db.flush()?;
-        log::debug!(target: "database", "delete: {k:?}");
+        log::debug!(target: "database", "delete: {:?}", k);
         Ok(())
     }
 
@@ -155,9 +155,9 @@ impl DbWrap {
             batch.delete(key);
         }
         match db.write(batch) {
-            Ok(()) => log::debug!(target: "database", "delete batch {batch_id} success"),
+            Ok(()) => log::debug!(target: "database", "delete batch {} success", batch_id),
             Err(e) => {
-                log::error!(target: "database", "delete batch {batch_id} failed for {e:?}");
+                log::error!(target: "database", "delete batch {} failed for {:?}", batch_id, e);
                 bail!("{:?}", e);
             }
         }
@@ -189,7 +189,7 @@ impl DbWrap {
         let keys = self.search_keys_by_prefix(&k, &db);
 
         if !keys.is_empty() {
-            log::info!(target: "database", "delete_all_prefix_key: {k:?}");
+            log::info!(target: "database", "delete_all_prefix_key: {:?}", k);
             for key in keys {
                 db.delete(&key)?;
                 log::debug!(target: "database", "delete: {}", String::from_utf8_lossy(&key));
