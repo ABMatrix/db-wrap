@@ -125,7 +125,7 @@ impl DbWrap {
         let mut batch = WriteBatch::default();
         for (k, v) in pairs {
             batch.put(&k, &v.data_with_lv(DEFAULT_LEVEL));
-            log::debug!(target: "database", "try put batch id: {}, k: {}, hash: {}, level: {DEFAULT_LEVEL}", batch_id, k, debug_hash_data(&v));
+            log::debug!(target: "database", "try put batch id: {}, k: {}, hash: {}, level: {}", batch_id, k, debug_hash_data(&v), DEFAULT_LEVEL);
         }
         match db.write(batch) {
             Ok(()) => log::debug!(target: "database", "put batch {} success", batch_id),
