@@ -118,14 +118,32 @@ impl DbWrap {
         Ok(())
     }
 
-    pub fn put_batch(&self, pairs: Vec<(String, Vec<u8>)>, path: &str) -> Result<()> {
+    pub fn put_batch(
+        &self,
+        pairs: Vec<(String, Vec<u8>)>,
+        lv: u8,
+        force: bool,
+        path: &str,
+    ) -> Result<()> {
         let db = self.db(path)?;
         let pair_json = serde_json::to_vec(&pairs).map_err(|e| anyhow!("{:?}", e))?;
         let batch_id = debug_hash_data(&pair_json);
         let mut batch = WriteBatch::default();
         for (k, v) in pairs {
-            batch.put(&k, &v.data_with_lv(DEFAULT_LEVEL));
-            log::debug!(target: "database", "try put batch id: {}, k: {}, hash: {}, level: {}", batch_id, k, debug_hash_data(&v), DEFAULT_LEVEL);
+            match db.get(&k) {
+                Ok(Some(old)) => {
+                    if old.data_lv() < lv && !force {
+                        bail!("data for {} exist with DataLevel {}", k, old.data_lv());
+                    }
+                }
+                Err(e) => {
+                    log::error!(target: "database", "get error: {:?}", e);
+                    bail!("database put-check error: {:?}", e);
+                }
+                Ok(None) => (),
+            };
+            batch.put(&k, &v.data_with_lv(lv));
+            log::debug!(target: "database", "try put batch id: {}, k: {}, hash: {}, level: {}", batch_id, k, debug_hash_data(&v), lv);
         }
         match db.write(batch) {
             Ok(()) => log::debug!(target: "database", "put batch {} success", batch_id),

@@ -96,7 +96,7 @@ pub mod db_server {
     pub enum RequestType {
         Get(String),
         Put(String, Vec<u8>, u8, bool),
-        PutBatch(Vec<(String, Vec<u8>)>),
+        PutBatch(Vec<(String, Vec<u8>)>, u8, bool),
         Delete(String),
         DeleteBatch(Vec<String>),
         GetPrefix(String),
@@ -124,10 +124,12 @@ pub mod db_server {
                     Err(e) => Err(format!("db_req failed for: {:?}", e)),
                 }
             }
-            RequestType::PutBatch(pairs) => match db_ref.put_batch(pairs, &path) {
-                Ok(res) => to_string(&res, "db_put_batch"),
-                Err(e) => Err(format!("db_req failed for: {:?}", e)),
-            },
+            RequestType::PutBatch(pairs, level, force) => {
+                match db_ref.put_batch(pairs, level, force, &path) {
+                    Ok(res) => to_string(&res, "db_put_batch"),
+                    Err(e) => Err(format!("db_req failed for: {:?}", e)),
+                }
+            }
             RequestType::Delete(key) => match db_ref.delete(key, &path) {
                 Ok(res) => to_string(&res, "db_delete"),
                 Err(e) => Err(format!("db_req failed for: {:?}", e)),
