@@ -115,6 +115,7 @@ impl DbWrap {
         log::debug!(target: "database", "put: {}, hash: {}, level: {}", k, debug_hash_data(&v), lv);
         db.put(&k, &v.data_with_lv(lv))?;
         db.flush()?;
+        log::debug!(target: "database", "put flush: {}", k);
         Ok(())
     }
 
@@ -153,6 +154,7 @@ impl DbWrap {
             }
         }
         db.flush()?;
+        log::debug!(target: "database", "put batch flush");
         Ok(())
     }
 
@@ -180,6 +182,7 @@ impl DbWrap {
             }
         }
         db.flush()?;
+        log::debug!(target: "database", "delete batch flush");
         Ok(())
     }
 
@@ -199,6 +202,7 @@ impl DbWrap {
                 }
             }
         }
+        log::debug!(target: "database", "get_prefix :{}", k);
         Ok(datas)
     }
 
