@@ -17,8 +17,8 @@ impl Default for RocksdbOptions {
         RocksdbOptions {
             create_if_missing: true,
             atomic_flush: true,
-            log_file_num: 5,
-            log_file_size: 100 * 1000 * 1000
+            log_file_num: 2,
+            log_file_size: 20 * 1000 * 1000
         }
     }
 }
