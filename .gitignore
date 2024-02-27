@@ -22,4 +22,6 @@
 *.dart_tool
 .packages
 
+db-server
+
 app
