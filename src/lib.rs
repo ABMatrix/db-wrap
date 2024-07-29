@@ -93,13 +93,13 @@ pub mod db_server {
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum RequestType {
-        Get(String),
-        Put(String, Vec<u8>, u8, bool),
-        PutBatch(Vec<(String, Vec<u8>)>, u8, bool),
-        Delete(String),
-        DeleteBatch(Vec<String>),
-        GetPrefix(String),
-        DeletePrefix(String),
+        Get(Vec<u8>),
+        Put(Vec<u8>, Vec<u8>, u8, bool),
+        PutBatch(Vec<(Vec<u8>, Vec<u8>)>, u8, bool),
+        Delete(Vec<u8>),
+        DeleteBatch(Vec<Vec<u8>>),
+        GetPrefix(Vec<u8>),
+        DeletePrefix(Vec<u8>),
     }
 
     #[post("/db_request", format = "json", data = "<request>")]
@@ -146,6 +146,7 @@ pub mod db_server {
                 Err(e) => Err(format!("db_req failed for: {:?}", e)),
             },
         };
+        log::debug!(target: "database_server", "Handle Request: {:?}, Response: {res:?}", request.0);
         Json(res)
     }
 

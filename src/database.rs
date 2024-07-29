@@ -1,4 +1,3 @@
-use crate::debug_hash_data;
 use anyhow::{anyhow, bail, Result};
 use parking_lot::RwLock;
 use rocksdb::{Options, WriteBatch, DB};
@@ -78,112 +77,88 @@ impl DbWrap {
         Ok(db)
     }
 
-    pub fn get(&self, k: String, path: &str) -> Result<Option<Vec<u8>>> {
+    pub fn get<K: AsRef<[u8]>>(&self, k: K, path: &str) -> Result<Option<Vec<u8>>> {
         let db = self.db(path)?;
-        let value = match db.get(&k) {
+        let value = match db.get(k) {
             Ok(value) => value,
             Err(e) => {
-                log::error!(target: "database", "get error: {}", e.to_string());
-                bail!("database no key: {:?}", k);
+                bail!("database get error: {e:?}");
             }
         };
         match value {
             Some(v) => {
-                let lv = v.data_lv();
                 let v = v.data_without_lv();
-                log::debug!(target: "database", "get key: {}, hash: {}, level: {}", k, debug_hash_data(&v), lv);
                 Ok(Some(v))
             }
             None => Ok(None),
         }
     }
 
-    pub fn put(&self, k: String, v: Vec<u8>, lv: u8, force: bool, path: &str) -> Result<()> {
+    pub fn put<K: AsRef<[u8]>>(&self, k: K, v: Vec<u8>, lv: u8, force: bool, path: &str) -> Result<()> {
         let db = self.db(path)?;
         match db.get(&k) {
             Ok(Some(old)) => {
                 if old.data_lv() < lv && !force {
-                    bail!("data for {} exist with DataLevel {}", k, old.data_lv());
+                    bail!("can't put data with level {lv} which exist with DataLevel {} without force", old.data_lv());
                 }
             }
             Err(e) => {
-                log::error!(target: "database", "get error: {:?}", e);
                 bail!("database put-check error: {:?}", e);
             }
             Ok(None) => (),
         };
-        log::debug!(target: "database", "put: {}, hash: {}, level: {}", k, debug_hash_data(&v), lv);
-        db.put(&k, &v.data_with_lv(lv))?;
+        db.put(k, &v.data_with_lv(lv))?;
         db.flush()?;
         Ok(())
     }
 
-    pub fn put_batch(
+    pub fn put_batch<K: AsRef<[u8]>>(
         &self,
-        pairs: Vec<(String, Vec<u8>)>,
+        pairs: Vec<(K, Vec<u8>)>,
         lv: u8,
         force: bool,
         path: &str,
     ) -> Result<()> {
         let db = self.db(path)?;
-        let pair_json = serde_json::to_vec(&pairs).map_err(|e| anyhow!("{:?}", e))?;
-        let batch_id = debug_hash_data(&pair_json);
         let mut batch = WriteBatch::default();
         for (k, v) in pairs {
             match db.get(&k) {
                 Ok(Some(old)) => {
                     if old.data_lv() < lv && !force {
-                        bail!("data for {} exist with DataLevel {}", k, old.data_lv());
+                        bail!("can't put data with level {lv} which exist with DataLevel {} without force", old.data_lv());
                     }
                 }
                 Err(e) => {
-                    log::error!(target: "database", "get error: {:?}", e);
                     bail!("database put-check error: {:?}", e);
                 }
                 Ok(None) => (),
             };
-            batch.put(&k, &v.data_with_lv(lv));
-            log::debug!(target: "database", "try put batch id: {}, k: {}, hash: {}, level: {}", batch_id, k, debug_hash_data(&v), lv);
+            batch.put(k, &v.data_with_lv(lv));
         }
-        match db.write(batch) {
-            Ok(()) => log::debug!(target: "database", "put batch {} success", batch_id),
-            Err(e) => {
-                log::error!(target: "database", "put batch {} failed for {:?}", batch_id, e);
-                bail!("{:?}", e);
-            }
-        }
+        db.write(batch).map_err(|e| anyhow!("{:?}", e))?;
         db.flush()?;
         Ok(())
     }
 
-    pub fn delete(&self, k: String, path: &str) -> Result<()> {
+    pub fn delete<K: AsRef<[u8]>>(&self, k: K, path: &str) -> Result<()> {
         let db = self.db(path)?;
-        db.delete(&k)?;
+        db.delete(k)?;
         db.flush()?;
-        log::debug!(target: "database", "delete: {:?}", k);
         Ok(())
     }
 
-    pub fn delete_batch(&self, keys: Vec<String>, path: &str) -> Result<()> {
+    pub fn delete_batch<K: AsRef<[u8]>>(&self, keys: Vec<K>, path: &str) -> Result<()> {
         let db = self.db(path)?;
-        let keys_json = serde_json::to_vec(&keys).map_err(|e| anyhow!("{:?}", e))?;
-        let batch_id = debug_hash_data(&keys_json);
         let mut batch = WriteBatch::default();
         for key in &keys {
             batch.delete(key);
         }
-        match db.write(batch) {
-            Ok(()) => log::debug!(target: "database", "delete batch {} success", batch_id),
-            Err(e) => {
-                log::error!(target: "database", "delete batch {} failed for {:?}", batch_id, e);
-                bail!("{:?}", e);
-            }
-        }
+        db.write(batch).map_err(|e| anyhow!("{:?}", e))?;
         db.flush()?;
         Ok(())
     }
 
-    pub fn get_prefix(&self, k: String, path: &str) -> Result<Vec<(Vec<u8>, Vec<u8>)>> {
+    pub fn get_prefix<K: AsRef<[u8]>>(&self, k: K, path: &str) -> Result<Vec<(Vec<u8>, Vec<u8>)>> {
         let db = self.db(path)?;
         let keys = self.search_keys_by_prefix(&k, &db);
         let mut datas = vec![];
@@ -192,32 +167,27 @@ impl DbWrap {
                 match db.get(&key) {
                     Ok(Some(data)) => datas.push((key.clone(), data.data_without_lv())),
                     Ok(None) => (),
-                    Err(e) => {
-                        log::error!(target: "database", "get error: {}", e.to_string());
-                        bail!("database no key: {:?}", k);
-                    }
+                    Err(e) => bail!("database get key error: {e:?}"),
                 }
             }
         }
         Ok(datas)
     }
 
-    pub fn delete_prefix(&self, k: String, path: &str) -> Result<()> {
+    pub fn delete_prefix<K: AsRef<[u8]>>(&self, k: K, path: &str) -> Result<()> {
         let db = self.db(path)?;
         let keys = self.search_keys_by_prefix(&k, &db);
 
         if !keys.is_empty() {
-            log::info!(target: "database", "delete_all_prefix_key: {:?}", k);
             for key in keys {
                 db.delete(&key)?;
-                log::debug!(target: "database", "delete: {}", String::from_utf8_lossy(&key));
             }
             db.flush()?;
         }
         Ok(())
     }
 
-    fn search_keys_by_prefix(&self, prefix: &str, db: &Arc<DB>) -> Vec<Vec<u8>> {
+    fn search_keys_by_prefix<K: AsRef<[u8]>>(&self, prefix: K, db: &Arc<DB>) -> Vec<Vec<u8>> {
         let mut keys = Vec::new();
         let mut prev_iter = db.raw_iterator();
         prev_iter.seek(&prefix);
