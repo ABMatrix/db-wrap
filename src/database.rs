@@ -77,6 +77,11 @@ impl DbWrap {
         Ok(db)
     }
 
+    pub fn flush(&self, path: &str) -> Result<()> {
+        self.db(path)?.flush()?;
+        Ok(())
+    }
+
     pub fn get<K: AsRef<[u8]>>(&self, k: K, path: &str) -> Result<Option<Vec<u8>>> {
         let db = self.db(path)?;
         let value = match db.get(k) {
@@ -108,7 +113,6 @@ impl DbWrap {
             Ok(None) => (),
         };
         db.put(k, &v.data_with_lv(lv))?;
-        db.flush()?;
         Ok(())
     }
 
@@ -136,14 +140,12 @@ impl DbWrap {
             batch.put(k, &v.data_with_lv(lv));
         }
         db.write(batch).map_err(|e| anyhow!("{:?}", e))?;
-        db.flush()?;
         Ok(())
     }
 
     pub fn delete<K: AsRef<[u8]>>(&self, k: K, path: &str) -> Result<()> {
         let db = self.db(path)?;
         db.delete(k)?;
-        db.flush()?;
         Ok(())
     }
 
@@ -154,7 +156,6 @@ impl DbWrap {
             batch.delete(key);
         }
         db.write(batch).map_err(|e| anyhow!("{:?}", e))?;
-        db.flush()?;
         Ok(())
     }
 
@@ -182,7 +183,6 @@ impl DbWrap {
             for key in keys {
                 db.delete(&key)?;
             }
-            db.flush()?;
         }
         Ok(())
     }
