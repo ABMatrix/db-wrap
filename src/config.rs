@@ -8,7 +8,7 @@ pub struct RocksdbOptions {
     /// default false
     pub atomic_flush: bool,
     /// default true
-    pub use_fsync: bool,
+    pub use_fsync: Option<bool>,
     // default 2
     pub log_file_num: Option<usize>,
     // default 20M
@@ -22,7 +22,7 @@ impl Default for RocksdbOptions {
         RocksdbOptions {
             create_if_missing: true,
             atomic_flush: false,
-            use_fsync: true,
+            use_fsync: Some(true),
             log_file_num: Some(2),
             log_file_size: Some(20 * 1000 * 1000),
             max_total_wal_size: Some(10 * 1 << 20)
@@ -38,7 +38,7 @@ impl From<RocksdbOptions> for Options {
         opt.set_keep_log_file_num(roc_opt.log_file_num.unwrap_or(2));
         opt.set_max_log_file_size(roc_opt.log_file_size.unwrap_or(20 * 1000 * 1000));
         opt.set_max_total_wal_size(roc_opt.max_total_wal_size.unwrap_or(10 * 1 << 20));
-        opt.set_use_fsync(roc_opt.use_fsync);
+        opt.set_use_fsync(roc_opt.use_fsync.unwrap_or(true));
         opt
     }
 }
