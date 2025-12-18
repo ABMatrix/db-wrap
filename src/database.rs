@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Result};
 use parking_lot::RwLock;
-use rocksdb::{Options, WriteBatch, DB};
+use rocksdb::{Options, WriteBatch, WriteOptions, DB};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -48,14 +48,18 @@ pub struct DbWrap {
     path: String,
     opt: Options,
     dbs: RwLock<HashMap<String, Arc<DB>>>,
+    write_opts: WriteOptions,
 }
 
 impl DbWrap {
     pub fn new(path: &str, opt: Options) -> Self {
+        let mut write_opts = WriteOptions::default();
+        write_opts.set_sync(true);
         DbWrap {
             path: path.to_string(),
             opt,
             dbs: RwLock::new(HashMap::new()),
+            write_opts,
         }
     }
 
@@ -112,7 +116,7 @@ impl DbWrap {
             }
             Ok(None) => (),
         };
-        db.put(k, &v.data_with_lv(lv))?;
+        db.put_opt(k, &v.data_with_lv(lv), &self.write_opts)?;
         Ok(())
     }
 
@@ -139,7 +143,7 @@ impl DbWrap {
             };
             batch.put(k, &v.data_with_lv(lv));
         }
-        db.write(batch).map_err(|e| anyhow!("{:?}", e))?;
+        db.write_opt(batch, &self.write_opts).map_err(|e| anyhow!("{:?}", e))?;
         Ok(())
     }
 
