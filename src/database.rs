@@ -149,7 +149,7 @@ impl DbWrap {
 
     pub fn delete<K: AsRef<[u8]>>(&self, k: K, path: &str) -> Result<()> {
         let db = self.db(path)?;
-        db.delete(k)?;
+        db.delete_opt(k, &self.write_opts)?;
         Ok(())
     }
 
@@ -159,7 +159,7 @@ impl DbWrap {
         for key in &keys {
             batch.delete(key);
         }
-        db.write(batch).map_err(|e| anyhow!("{:?}", e))?;
+        db.write_opt(batch, &self.write_opts).map_err(|e| anyhow!("{:?}", e))?;
         Ok(())
     }
 
@@ -185,7 +185,7 @@ impl DbWrap {
 
         if !keys.is_empty() {
             for key in keys {
-                db.delete(&key)?;
+                db.delete_opt(&key, &self.write_opts)?;
             }
         }
         Ok(())

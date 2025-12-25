@@ -15,7 +15,7 @@ pub struct RocksdbOptions {
     pub log_file_size: Option<usize>,
     // default 10M
     pub max_total_wal_size: Option<u64>,
-    // default 64K
+    // default 0
     pub bytes_per_sync: Option<u64>,
 }
 
@@ -28,7 +28,7 @@ impl Default for RocksdbOptions {
             log_file_num: Some(2),
             log_file_size: Some(20 * 1000 * 1000),
             max_total_wal_size: Some(10 * 1 << 20),
-            bytes_per_sync: Some(64 * 1024),
+            bytes_per_sync: Some(0),
         }
     }
 }
@@ -42,7 +42,7 @@ impl From<RocksdbOptions> for Options {
         opt.set_max_log_file_size(roc_opt.log_file_size.unwrap_or(20 * 1000 * 1000));
         opt.set_max_total_wal_size(roc_opt.max_total_wal_size.unwrap_or(10 * 1 << 20));
         opt.set_use_fsync(roc_opt.use_fsync.unwrap_or(true));
-        opt.set_bytes_per_sync(roc_opt.bytes_per_sync.unwrap_or(64 * 1024));
+        opt.set_bytes_per_sync(roc_opt.bytes_per_sync.unwrap_or(0));
         opt
     }
 }
